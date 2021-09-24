@@ -5,6 +5,14 @@ import zipfile
 import random
 
 def bring_data(path_list, root='data'):
+    """
+    Brings zip folders and unzips them into the specified root. 
+
+    Output:
+        path_list: list of paths to each of the compressed folders stored
+            in the drive.
+        root: path in which the compressed folder will be unzipped.
+    """
 
     # Delete directories to avoid over-riding files
     try:
