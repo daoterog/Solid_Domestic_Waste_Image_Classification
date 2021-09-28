@@ -4,7 +4,6 @@ import numpy as np
 
 import matplotlib.pyplot as plt
 
-import sklearn
 from sklearn.model_selection import StratifiedKFold, GridSearchCV, learning_curve
 from sklearn.metrics import (auc, precision_score, recall_score, f1_score, 
                             average_precision_score, plot_precision_recall_curve,

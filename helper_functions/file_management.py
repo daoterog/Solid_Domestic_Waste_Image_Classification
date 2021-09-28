@@ -8,7 +8,6 @@ import random
 import pandas as pd
 import numpy as np
 
-import sklearn
 from sklearn.externals import joblib
 
 def bring_data(path_list, root='data'):
