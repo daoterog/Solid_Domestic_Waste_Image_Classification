@@ -150,3 +150,48 @@ def load_sample_images(root, resize = (0,0), blur = False, grayscale = False,
     plt.show()
 
     return img
+
+def extract_patches(img, patch_size, step_size, include_empty_patches=False):
+    with tf.device('/device:GPU:0'):
+        patches = []
+        for y in range(0, img.shape[0]-patch_size+1, step_size):
+            for x in range(0, img.shape[1]-patch_size+1, step_size):
+                patch = img[y:y+patch_size,x:x+patch_size]
+                if patch.shape==(patch_size, patch_size) and \
+                (include_empty_patches or np.sum(patch)!=0):
+                    patches.append(patch)
+    return patches
+
+def get_visual_dictionary(X, patch_size, step_size, dict_size):
+    with tf.device('/device:GPU:1'):
+        patches = []
+        for img in X:
+            patches += [i.reshape(patch_size**2) for i in \
+                        extract_patches(img, patch_size, step_size)]
+
+        cinit = np.zeros((dict_size, patch_size**2))
+        km = KMeans(n_clusters=dict_size, init=cinit, n_init=1, n_jobs=-1)
+        km.fit(patches)
+        return km.cluster_centers_
+
+def get_closest(patch, dictionary):
+
+    with tf.device('/device:GPU:2'):
+        dmin, r = np.inf, None
+        for i, vw in enumerate(dictionary):
+            distance = scipy.linalg.norm(patch-vw)
+            if distance<dmin:
+                dmin = distance
+                r = i
+    return r
+
+def get_histogram(img, patch_size, step_size, dictionary):
+
+    with tf.device('/device:GPU:3'):
+        patches = [i.flatten() for i in \
+                   extract_patches(img, patch_size, step_size)]
+        
+        vws = np.array([get_closest(patch, dictionary) for patch in patches])
+        h = [np.sum(vws==i) for i in range(len(dictionary))]
+
+    return np.array(h)*1./np.sum(h)
