@@ -2,7 +2,14 @@ import os
 import shutil
 import errno
 import zipfile
+
 import random
+
+import pandas as pd
+import numpy as np
+
+import sklearn
+from sklearn.externals import joblib
 
 def bring_data(path_list, root='data'):
     """
@@ -138,3 +145,125 @@ def split_images(root='data/', train_size=0.7, test_proportion=0.5):
                 if os.path.isfile(src_path):
                     dst_path = os.path.join(category_test_path,image)
                     shutil.copy(src_path, dst_path)
+
+def storemodel(classifier, param_dict, dataset_key, X, y, path, model_name):
+
+    """
+    Stores a trained model (.joblib format) in the specified path.
+
+    Args:
+        classifier: used model to perform predictions.
+        param_dict: models hyperparameter dictionary.
+        dataset_key: dataset key.
+        X: independent variables.
+        y: dependent variable.
+        path: path in which tje model is going to be stored.
+        model_name: name of the model
+    """ 
+
+    # Set Parameters
+    clf = classifier.set_params(**param_dict[dataset_key])
+
+    # Train Model
+    clf_fitted = clf.fit(X,y)
+
+    # Save model
+    joblib.dump(clf_fitted,path+'/'+model_name+'.joblib')
+
+
+def storeresults(classifier, results, model_name, param_dict, 
+                 param_title_dictionary, X, y, path):
+    
+    """ Creates a dataframe with tabulated results
+
+    Args:
+        classifier: used model to perform predictions.
+        results: array of metric dictionaries.
+        model_name: self explanatory.
+        param_dict: models parameter grid.
+        param_title_dictionary: model hyperparameter title (String).
+        X: independent variables.
+        y: dependent variables.
+        path: path to load the model.
+
+    Output: 
+        df: Dataframe with results.
+    """
+
+
+    # Creating Dataframe that contains results
+    df = pd.DataFrame({'Model':str,'Dataset':str,
+                            'Mean_Precision':float,
+                            'STD_Precision':float,
+                            'Mean_Recall':float,
+                            'STD_Recall':float,
+                            'Mean_F1':float,
+                            'STD_F1':float,
+                            'Mean_AUC':float,
+                            'STD_AUC':float},index = [0])
+
+    for dataset_key in param_dict.keys():
+
+        # Extract list
+        precision = results[0][dataset_key]
+        recall = results[1][dataset_key]
+        f1 = results[2][dataset_key]
+        auc = results[3][dataset_key]
+
+        # Extract Statistic
+        precision_mean = np.mean(precision)
+        precision_std = np.std(precision)
+        recall_mean = np.mean(recall)
+        recall_std = np.std(recall)
+        f1_mean = np.mean(f1)
+        f1_std = np.std(f1)
+        auc_mean = np.mean(auc)
+        auc_std = np.std(auc)
+
+        # Experiment model and hyperparameter
+        name = model_name + '_' + param_title_dictionary[dataset_key]
+
+        storemodel(classifier, param_dict, dataset_key, X, y, path, name)
+        
+        df = df.append({'Model':name,'Dataset':dataset_key,
+                            'Mean_Precision':precision_mean,
+                            'STD_Precision':precision_std,
+                            'Mean_Recall':recall_mean,
+                            'STD_Recall':recall_std,
+                            'Mean_F1':f1_mean,
+                            'STD_F1':f1_std,
+                            'Mean_AUC':auc_mean,
+                            'STD_AUC':auc_std},ignore_index=True)
+        
+    df.drop(index = 0, axis = 0, inplace = True)
+        
+    return df
+
+def copytree(dir, src, dst, symlinks=False, ignore=None):
+    """ 
+    Used to copy a whole directory into a destination.
+
+    Args:
+        dir: name of the directory.
+        src: source path.
+        dst: destination path. 
+
+    """
+
+    dst = os.path.join(dst,dir)
+
+    try:
+        os.mkdir(dst)
+    except OSError as e:
+        if e.errno == errno.EEXIST:
+            print('Directory already exist')
+        else:
+            raise
+
+    for item in os.listdir(src):
+        s = os.path.join(src, item)
+        d = os.path.join(dst, item)
+        if os.path.isdir(s):
+            shutil.copytree(s, d, symlinks, ignore)
+        else:
+            shutil.copy2(s, d)
