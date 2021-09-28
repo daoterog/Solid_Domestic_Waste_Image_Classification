@@ -1,8 +1,15 @@
 import os
 import cv2
+
+import scipy
 import numpy as np
-import tensorflow as tf
+import pandas as pd
+
 import matplotlib.pyplot as plt
+
+from sklearn.cluster import KMeans
+from sklearn.decomposition import PCA, NMF
+import tensorflow as tf
 
 def extract_edges(img):
 
@@ -204,7 +211,7 @@ def applypca(X):
 
     return X_pca, pca
 
-def applynmf(X):
+def applynmf(X, cont):
 
     nmf = NMF(n_components = cont)
     X_nmf = nmf.fit_transform(X)
