@@ -195,3 +195,19 @@ def get_histogram(img, patch_size, step_size, dictionary):
         h = [np.sum(vws==i) for i in range(len(dictionary))]
 
     return np.array(h)*1./np.sum(h)
+
+def applypca(X):
+
+    pca = PCA()
+    X_pca = pca.fit_transform(X)
+    X_pca = pd.DataFrame(X_pca)
+
+    return X_pca, pca
+
+def applynmf(X):
+
+    nmf = NMF(n_components = cont)
+    X_nmf = nmf.fit_transform(X)
+    X_nmf = pd.DataFrame(X_nmf)
+
+    return (X_nmf,nmf)
