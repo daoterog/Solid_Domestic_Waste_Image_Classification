@@ -13,6 +13,16 @@ import tensorflow as tf
 
 def extract_edges(img):
 
+    """
+    Extracts the edges of the image using the canny algorithm.
+
+    Args:
+        img: image.
+
+    Outputs:
+        edged: highlighted edges image.
+    """
+
     # Blurring 
     blurred = cv2.bilateralFilter(img,15,150,150)
 
@@ -31,6 +41,18 @@ def extract_edges(img):
 
 def make_cut(img, edged):
 
+    """
+    Cuts the image on the corresponding axis.
+
+    Args:
+        img: image.
+        edged: highlighted edges image.
+
+    Output:
+        img: cutted image.
+        edged: cutted highlighted edges image.
+    """
+
     index = 0
     for i in range(edged.shape[0]):
         aux = np.sum(edged[i])
@@ -45,6 +67,17 @@ def make_cut(img, edged):
     return img, edged
 
 def center_image(img):
+
+    """
+    Centers the image taking into account the borders of the object.
+
+    Args:
+        img: image that is going to be centered.
+
+    Outputs:
+        img: centered image.
+        edged: centered image with highlighted borders.
+    """
 
     edged = extract_edges(img)
 
@@ -76,6 +109,23 @@ def center_image(img):
     return img, edged
 
 def preprocessing(img, resize, blur, grayscale, rescale, edges, center):
+
+    """
+    Applies the specified functions to the image.
+
+    Args:
+        img: image to be preprocessed.
+        resize: reference size to give to the image.
+        blur: Boolean marker that indicates to blur the image.
+        grayscale: Boolean marker that indicates to convert the image to 
+            grayscale.
+        recale: Boolean marker that indicates to rescale image pixel values.
+        edges: Boolean marker that indicates to extract edges of the image.
+        center: Boolean marker that indicates to center the image.
+
+    Output:
+        img: preprocessed img
+    """
     
     # Convert it to GrayScale or to RGB
     if grayscale:
@@ -114,6 +164,24 @@ def preprocessing(img, resize, blur, grayscale, rescale, edges, center):
 def load_images(root = 'data', resize = (0,0), blur = False, grayscale = False,
                 rescale = False, edges = False, center = False):
     
+    """
+    This function reads the images and stores them into a dictionary.
+
+    Args:
+        root: path to the data/image directory
+        resize: reference size to give to the image.
+        blur: Boolean marker that indicates to blur the image.
+        grayscale: Boolean marker that indicates to convert the image to 
+            grayscale.
+        recale: Boolean marker that indicates to rescale image pixel values.
+        edges: Boolean marker that indicates to extract edges of the image.
+        center: Boolean marker that indicates to center the image.
+
+    Output:
+        images: dictionary of images with each label as key of the dictionary.
+
+    """
+    
     with tf.device('/device:GPU:0'):
 
         images = {}
@@ -139,6 +207,23 @@ def load_images(root = 'data', resize = (0,0), blur = False, grayscale = False,
 
 def load_sample_images(root, resize = (0,0), blur = False, grayscale = False,
                 rescale = False, edges = False, center = False):
+    
+    """
+    Reads specified image and plots the raw and preprocessed version of it.
+
+    Args:
+        root: path to the image.
+        resize: reference size to give to the image.
+        blur: Boolean marker that indicates to blur the image.
+        grayscale: Boolean marker that indicates to convert the image to 
+            grayscale.
+        recale: Boolean marker that indicates to rescale image pixel values.
+        edges: Boolean marker that indicates to extract edges of the image.
+        center: Boolean marker that indicates to center the image.
+
+    Outputs:
+        img: preprocessed image.
+    """
     
     # Read Image
     img = cv2.imread(root)
