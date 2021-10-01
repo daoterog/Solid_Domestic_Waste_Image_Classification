@@ -244,22 +244,52 @@ def load_sample_images(root, resize = (0,0), blur = False, grayscale = False,
     return img
 
 def extract_patches(img, patch_size, step_size, include_empty_patches=False):
+
+    """
+    Extracts patches of each image, flattens it, and adds it to a list.
+
+    Args:
+        img: image.
+        patch_size: size of the squared patch.
+        step_size: specified step of the mask that will run through the image.
+        include_empty_patches: Boolean for including patches with missing 
+            information.
+
+    Output:
+        patches: list flattened image patches.
+    """
+
     with tf.device('/device:GPU:0'):
         patches = []
         for y in range(0, img.shape[0]-patch_size+1, step_size):
             for x in range(0, img.shape[1]-patch_size+1, step_size):
                 patch = img[y:y+patch_size,x:x+patch_size]
                 if patch.shape==(patch_size, patch_size) and \
-                (include_empty_patches or np.sum(patch)!=0):
+                                    (include_empty_patches or np.sum(patch)!=0):
                     patches.append(patch)
     return patches
 
 def get_visual_dictionary(X, patch_size, step_size, dict_size):
+
+    """
+    Creates dictionary of specified size of features using the KMeans algorithm.
+
+    Args:
+        X:
+        patch_size: size of the squared patch.
+        step_size: specified step of the mask that will run through the image.
+        dict_size: size of the dictionary (number of clusters created by the 
+            algorithm).
+
+    Outputs:
+        km.cluster_centers_: visual dictionary of features.
+    """
+
     with tf.device('/device:GPU:1'):
         patches = []
         for img in X:
-            patches += [i.reshape(patch_size**2) for i in \
-                        extract_patches(img, patch_size, step_size)]
+            patches += [i.reshape(patch_size**2) for i in extract_patches(img, 
+                                                        patch_size, step_size)]
 
         cinit = np.zeros((dict_size, patch_size**2))
         km = KMeans(n_clusters=dict_size, init=cinit, n_init=1, n_jobs=-1)
@@ -267,6 +297,17 @@ def get_visual_dictionary(X, patch_size, step_size, dict_size):
         return km.cluster_centers_
 
 def get_closest(patch, dictionary):
+
+    """
+    Get the closes feature to the one identified in a patch.
+
+    Args:
+        patch: patch of the image.
+        dictionary: visual dictionary of features.
+
+    Outputs:
+        r: index of the identified feature in the dictionary.
+    """
 
     with tf.device('/device:GPU:2'):
         dmin, r = np.inf, None
@@ -279,27 +320,23 @@ def get_closest(patch, dictionary):
 
 def get_histogram(img, patch_size, step_size, dictionary):
 
+    """
+    Creates the feature vector (histogram) of each image.
+
+    Args:
+        img: image to get the dictionary.
+        patch: patch of the image.
+        step_size: specified step of the mask that will run through the image.
+        dictionary: visual dictionary of features.
+
+    Output:
+        np.array(h)*1./np.sum(h): normalized histogram.
+    """
+
     with tf.device('/device:GPU:3'):
-        patches = [i.flatten() for i in \
-                   extract_patches(img, patch_size, step_size)]
+        patches = [i.flatten() for i in extract_patches(img, patch_size, step_size)]
         
         vws = np.array([get_closest(patch, dictionary) for patch in patches])
         h = [np.sum(vws==i) for i in range(len(dictionary))]
 
     return np.array(h)*1./np.sum(h)
-
-def applypca(X):
-
-    pca = PCA()
-    X_pca = pca.fit_transform(X)
-    X_pca = pd.DataFrame(X_pca)
-
-    return X_pca, pca
-
-def applynmf(X, cont):
-
-    nmf = NMF(n_components = cont)
-    X_nmf = nmf.fit_transform(X)
-    X_nmf = pd.DataFrame(X_nmf)
-
-    return (X_nmf,nmf)
