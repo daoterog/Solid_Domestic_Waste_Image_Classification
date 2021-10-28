@@ -101,8 +101,6 @@ def make_confusion_matrix(y_true, y_pred, fig, ax, accuracy, classes=None,
     n_classes = cm.shape[0] # find the number of classes we're dealing with
 
     # Plot the figure and make it pretty
-    divider = make_axes_locatable(ax)
-    # cax = divider.append_axes('right', size='5%', pad=0.05)
     cax = ax.matshow(cm, cmap=plt.cm.Blues) # colors will represent how 'correct' a class is, darker == better
     fig.colorbar(cax, ax=ax)
 
