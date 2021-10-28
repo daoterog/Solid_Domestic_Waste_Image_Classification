@@ -1,13 +1,15 @@
 import os
 
 import numpy as np
+from decimal import Decimal
+import itertools
 
 import matplotlib.pyplot as plt
 
 from sklearn.model_selection import StratifiedKFold, GridSearchCV, learning_curve
 from sklearn.metrics import (auc, precision_score, recall_score, f1_score, 
                             average_precision_score, plot_precision_recall_curve,
-                            roc_curve)
+                            roc_curve, classification_report, confusion_matrix)
 
 def across_class_results(y_true, y_pred, fig, ax):
 
