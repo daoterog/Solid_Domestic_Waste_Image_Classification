@@ -141,7 +141,7 @@ def make_confusion_matrix(y_true, y_pred, fig, ax, accuracy, classes=None,
                 color="white" if cm[i, j] > threshold else "black",
                 size=text_size)
             
-def multiclass_CV(classifier, k, X_dict, y, param_dict, param_title_dictionary, 
+def multiclass_CV(classifier, k, X_dict, y, param_dict, param_title_dictionary, class_names,
                   model_name, path):
     
     """
@@ -195,7 +195,7 @@ def multiclass_CV(classifier, k, X_dict, y, param_dict, param_title_dictionary,
         class_scores, accuracy = across_class_results(true_labels, pred_labels, 
                                                 fig, ax[1])
         make_confusion_matrix(true_labels, pred_labels, fig, ax[0], accuracy,
-                               CLASSES, norm=True)
+                               class_names, norm=True)
         fig.suptitle(title)
 
         # Save Figure
