@@ -66,6 +66,80 @@ def make_cut(img, edged):
     
     return img, edged
 
+def center_image_IDG(img):
+
+    """
+    Centers the image taking into account the borders of the object. This method 
+    is created specifically for using it along the tensorflow's 
+    ImageDataGenerator. It is significantly faster to use. 
+
+    Args:
+        img: image that is going to be centered.
+        
+    Outputs:
+        img: centered image.
+        edged: centered image with highlighted borders.
+    """
+
+    img = tf.keras.preprocessing.image.img_to_array(img)
+    
+    # Extract edges
+    edged = extract_edges(img)
+
+    # Superior cut
+    img_cutted, edged_cutted = make_cut(img, edged)
+
+    # Square the image
+    max_img_shape = np.max(tf.shape(img_cutted).numpy())
+    new_image_shape = (max_img_shape, max_img_shape)
+    img_cutted = tf.image.resize(img_cutted, list(new_image_shape))
+    edged_cutted = cv2.resize(edged_cutted, new_image_shape, 
+                              interpolation = cv2.INTER_AREA)
+
+    # Transpose it
+    img_trans = tf.squeeze(img_cutted.numpy().transpose())
+    edged_trans = edged_cutted.transpose()
+    
+    # Left cut
+    img_trans_cutted, edged_trans_cutted = make_cut(img_trans, edged_trans)
+
+    # Flip it
+    edged_trans_flip = np.flip(edged_trans_cutted)
+    img_trans_flip = np.flip(img_trans_cutted)
+
+    # Right cut
+    img_trans_flip_cutted, edged_trans_flip_cutted = make_cut(img_trans_flip, 
+                                                              edged_trans_flip)
+    
+    # Square the image
+    max_img_shape = np.max(tf.shape(img_trans_flip_cutted).numpy())
+    new_image_shape = (max_img_shape, max_img_shape)
+    img_trans_flip_cutted = cv2.resize(np.float32(img_trans_flip_cutted), new_image_shape, 
+                              interpolation = cv2.INTER_AREA)
+    edged_trans_flip_cutted = cv2.resize(edged_trans_flip_cutted, new_image_shape, 
+                              interpolation = cv2.INTER_AREA)
+
+    # Transpose it 
+    edged_trans_flip_trans = edged_trans_flip_cutted.transpose()
+    img_trans_flip_trans = img_trans_flip_cutted.transpose()
+
+    # Inferior cut
+    img_trans_flip_trans_cutted, edged_trans_flip_trans_cutted = make_cut(img_trans_flip_trans,
+                                                            edged_trans_flip_trans)
+    
+    img1 = np.flip(img_trans_flip_trans_cutted.transpose()).transpose()
+    edged1 = np.flip(edged_trans_flip_trans_cutted.transpose()).transpose()
+
+    # Square the image
+    max_img_shape = np.max(tf.shape(img1).numpy())
+    new_image_shape = (max_img_shape, max_img_shape)
+    img = cv2.resize(np.float32(img1), new_image_shape, 
+                              interpolation = cv2.INTER_AREA)
+
+    img = tf.expand_dims(img, axis=2)
+
+    return img
+
 def center_image(img):
 
     """
