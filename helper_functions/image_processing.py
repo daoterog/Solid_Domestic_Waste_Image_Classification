@@ -434,7 +434,7 @@ def applypca(X):
 
     return X_pca, pca
 
-def applynmf(X):
+def applynmf(X, cont):
 
     """
     Applies NMF to the dataset.
