@@ -11,7 +11,7 @@ from sklearn.metrics import (auc, precision_score, recall_score, f1_score,
                             average_precision_score, plot_precision_recall_curve,
                             roc_curve, classification_report, confusion_matrix)
 
-def across_class_results(y_true, y_pred, fig, ax):
+def across_class_results(y_true, y_pred, class_names, fig, ax):
 
     """
     Compiles the presicion, recall, and f1 scores of each class into a single 
@@ -44,9 +44,9 @@ def across_class_results(y_true, y_pred, fig, ax):
             accuracy = value
             break
         else:
-            class_f1_scores[CLASSES[int(Decimal(key))]] = value['f1-score']
-            class_precision[CLASSES[int(Decimal(key))]] = value['precision']
-            class_recall[CLASSES[int(Decimal(key))]] = value['recall']
+            class_f1_scores[class_names[int(Decimal(key))]] = value['f1-score']
+            class_precision[class_names[int(Decimal(key))]] = value['precision']
+            class_recall[class_names[int(Decimal(key))]] = value['recall']
 
     # Create DataFrame with dictionary
     class_scores = pd.DataFrame({"class_name": list(class_f1_scores.keys()),
@@ -193,7 +193,7 @@ def multiclass_CV(classifier, k, X_dict, y, param_dict, param_title_dictionary, 
         fig, ax = plt.subplots(1, 2, figsize=(16, 8), dpi=100)
 
         class_scores, accuracy = across_class_results(true_labels, pred_labels, 
-                                                fig, ax[1])
+                                                      class_names, fig, ax[1])
         make_confusion_matrix(true_labels, pred_labels, fig, ax[0], accuracy,
                                class_names, norm=True)
         fig.suptitle(title)
