@@ -10,6 +10,27 @@ import numpy as np
 
 from sklearn.externals import joblib
 
+def copy_folder(path, destination):
+
+    """
+    Copies the experiment directory into the specifified destination. It allows
+    the user to fill a description in order to give further insight of the 
+    experimentation.
+
+    Args:
+        path: path to the experiment folder.
+        destination: path to the destination folder.
+    """
+
+    comment = str(input('Enter the experiment description:'))
+
+    # Extract experiment name
+    experiment = os.path.basename(path)
+
+    np.savetxt(os.path.join(path,experiment + '.txt'),[comment], fmt = '%10s')
+
+    copytree(experiment,path,destination)
+
 def bring_data(path_list, root='data'):
     """
     Brings zip folders and unzips them into the specified root. 
