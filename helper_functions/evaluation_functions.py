@@ -32,7 +32,6 @@ def print_wrong_predictions(wrong_preds, n_images, image_generator, params,
     # Extract Sample Images Paths
     sample_wrong_preds = wrong_preds.iloc[:n_images,]
     image_paths = sample_wrong_preds.img_path.tolist()
-    print(image_paths)
 
     # Create directory to store images
 
