@@ -1,4 +1,5 @@
 import os
+import shutil
 
 import pandas as pd
 import numpy as np
@@ -11,6 +12,59 @@ from sklearn.model_selection import StratifiedKFold, GridSearchCV, learning_curv
 from sklearn.metrics import (auc, precision_score, recall_score, f1_score, 
                             average_precision_score, plot_precision_recall_curve,
                             roc_curve, classification_report, confusion_matrix)
+
+def create_wrong_prediction_image_dir(image_paths, dir):
+    
+    try:
+        os.makedirs(dir)
+    except OSError as e:
+        if e.errno == errno.EEXIST:
+            print('Directory already exist')
+        else:
+            raise
+
+    for path in image_paths:
+        shutil.copy('/content/'+path, os.path.join(dir,os.path.basename(path)))
+
+def print_wrong_predictions(wrong_preds, n_images, image_generator, params, 
+                            dir=None):
+
+    # Extract Sample Images Paths
+    sample_wrong_preds = wrong_preds.iloc[:n_images,]
+    image_paths = sample_wrong_preds.img_path.tolist()
+    print(image_paths)
+
+    # Create directory to store images
+
+    # Make target directory
+    if dir == None:
+        dir = '/content/wrong_prediction_images/images'
+
+    create_wrong_prediction_image_dir(image_paths, dir)
+    
+    # Load and process images
+    data_gen = image_generator.flow_from_directory(directory=os.path.dirname(dir),
+                                                   batch_size = n_images,
+                                                   **params)
+    
+    # Extract images
+    wrong_pred_images, _ = data_gen.next()
+
+    # Plot images
+    for i, row in enumerate(sample_wrong_preds.itertuples()):
+        _, img_path, _, _, y_prob, y_true, y_pred, _ = row
+
+        img = wrong_pred_images[i]
+
+        plt.imshow(img[:,:,0])
+        plt.title(f"{img_path}\nactual: {y_true}, pred: {y_pred} \nprob: {y_prob:.2f}")
+        plt.axis(False)
+        plt.show()
+
+    try:
+        shutil.rmtree(os.path.dirname(dir))
+    except Exception:
+        print('Directory not found')
 
 def across_class_results(y_true, y_pred, class_names, title, fig, ax):
 
