@@ -11,21 +11,20 @@ from sklearn.metrics import (auc, precision_score, recall_score, f1_score,
                             average_precision_score, plot_precision_recall_curve,
                             roc_curve, classification_report, confusion_matrix)
 
-def across_class_results(y_true, y_pred, class_names, fig, ax):
+def across_class_results(y_true, y_pred, class_names, title, fig, ax):
 
     """
     Compiles the presicion, recall, and f1 scores of each class into a single 
     dataframe. It calculates the accuracy score as well.
-
     Args:
         y_true: Array of truth labels (must be same shape as y_pred).
         y_pred: Array of predicted labels (must be same shape as y_true).
+        class_names: names of each target classes.
+        title: title of the plot.
         fig: figure object for plotting.
         ax: axis object for plotting.
-
     Output:
-        class_scores: DataFrame compiling results for each class.
-        accuracy: accuracy score.
+        df_results: DataFrame compiling results for each class.
     """
     # Extract the classification report
     classification_report_dict = classification_report(y_true=y_true,
@@ -36,34 +35,92 @@ def across_class_results(y_true, y_pred, class_names, fig, ax):
     class_f1_scores = {}
     class_precision = {}
     class_recall = {}
-    accuracy = 0
+
+    # Create df columns
+    df_columns = []
+    df_values = []
 
     # Loop through the classification report items
     for key, value in classification_report_dict.items():
         if key == 'accuracy':
             accuracy = value
+            df_columns = ['model_name',key] + df_columns
+            df_values = [title, value] + df_values
             break
         else:
-            class_f1_scores[class_names[int(Decimal(key))]] = value['f1-score']
-            class_precision[class_names[int(Decimal(key))]] = value['precision']
-            class_recall[class_names[int(Decimal(key))]] = value['recall']
+
+            # Extract Values
+            name = class_names[int(Decimal(key))]
+            f1_score = value['f1-score']; precision = value['precision']
+            recall = value['recall']
+
+            # Fill DataFrame Values
+            df_columns.extend([name+'_f1_score', name+'_precision', name+'_recall'])
+            df_values.extend([f1_score, precision, recall])
+
+            # Construct score dictionaries for plotting
+            class_f1_scores[name] = f1_score
+            class_precision[name] = precision
+            class_recall[name] = recall
+
+
+    # Create df_results
+    df_results = pd.DataFrame(df_values).transpose()
+    df_results.columns = df_columns
 
     # Create DataFrame with dictionary
     class_scores = pd.DataFrame({"class_name": list(class_f1_scores.keys()),
-                            "f1-score": list(class_f1_scores.values()),
+                            "f1_score": list(class_f1_scores.values()),
                             'precision': list(class_precision.values()),
                             'recall': list(class_recall.values())})\
-                            .sort_values("f1-score", ascending=False)
+                            .sort_values("f1_score", ascending=False)
 
     # f1-score plot
-    scores = ax.barh(range(len(class_scores)), class_scores["f1-score"].values)
+    scores = ax.barh(range(len(class_scores)), class_scores["f1_score"].values)
     ax.set_yticks(range(len(class_scores)))
     ax.set_yticklabels(list(class_scores["class_name"]))
     ax.set_xlabel("f1-score")
     ax.set_title("F1-Scores for each Class")
     ax.invert_yaxis(); # reverse the order
 
-    return class_scores, accuracy
+    return class_scores, accuracy, df_results
+
+def precision_recall_barplot(class_scores, title, path):
+
+    """
+    Plots precision and recall values for each class as barplots.
+
+    Args:
+        class_scores: DataFrame that contains necessary values.
+        title: of the plot
+        path: to load the data.
+    """
+
+    # Make Second Plot
+    fig, ax = plt.subplots(1, 2, figsize=(14, 7), dpi=100)
+
+    # precision plot
+    scores = ax[0].barh(range(len(class_scores)), class_scores["precision"].values)
+    ax[0].set_yticks(range(len(class_scores)))
+    ax[0].set_yticklabels(list(class_scores["class_name"]))
+    ax[0].set_xlabel("precision")
+    ax[0].set_title("Precision Score for each Class")
+    ax[0].invert_yaxis(); # reverse the order
+
+    # recall plot
+    scores = ax[1].barh(range(len(class_scores)), class_scores["recall"].values)
+    ax[1].set_yticks(range(len(class_scores)))
+    ax[1].set_yticklabels(list(class_scores["class_name"]))
+    ax[1].set_xlabel("recall")
+    ax[1].set_title("Recall Score for each Class")
+    ax[1].invert_yaxis(); # reverse the order
+
+    fig.suptitle(title)
+
+    # Save Figure
+    filename = 'pr_rc_' + str(title) + '.jpg'
+    fig.savefig(os.path.join(path,filename), dpi = 100)
+    plt.show()
 
 def make_confusion_matrix(y_true, y_pred, fig, ax, accuracy, classes=None, 
                            norm=False, text_size=10): 
@@ -72,7 +129,6 @@ def make_confusion_matrix(y_true, y_pred, fig, ax, accuracy, classes=None,
     Makes a labelled confusion matrix comparing predictions and ground truth labels.
     If classes is passed, confusion matrix will be labelled, if not, integer class values
     will be used.
-
     Args:
         y_true: Array of truth labels (must be same shape as y_pred).
         y_pred: Array of predicted labels (must be same shape as y_true).
@@ -87,7 +143,6 @@ def make_confusion_matrix(y_true, y_pred, fig, ax, accuracy, classes=None,
     
     Returns:
         A labelled confusion matrix plot comparing y_true and y_pred.
-
     Example usage:
         make_confusion_matrix(y_true=test_labels, # ground truth test labels
                             y_pred=y_preds, # predicted labels
@@ -139,13 +194,12 @@ def make_confusion_matrix(y_true, y_pred, fig, ax, accuracy, classes=None,
                 color="white" if cm[i, j] > threshold else "black",
                 size=text_size)
             
-def multiclass_CV(classifier, k, X_dict, y, param_dict, param_title_dictionary, class_names,
-                  model_name, path):
+def multiclass_CV(classifier, k, X_dict, y, param_dict, param_title_dictionary, 
+                  class_names, model_name, path):
     
     """
     Plots a confusion matrix and f1-scores calculated from the concatenation of 
     the results of the classifier over the whole dataset.
-
     Args:
         classifier: model.
         k: number of splits.
@@ -155,8 +209,11 @@ def multiclass_CV(classifier, k, X_dict, y, param_dict, param_title_dictionary, 
         param_title_dictionary: model hyperparameter title (String).
         model_name: self explanatory.
         path: to load the data.
-
+    Output:
+        df: DataFrame with the results of each model.
     """
+
+    df = pd.DataFrame()
     
     for dataset_key in X_dict.keys():
 
@@ -190,16 +247,25 @@ def multiclass_CV(classifier, k, X_dict, y, param_dict, param_title_dictionary, 
 
         fig, ax = plt.subplots(1, 2, figsize=(16, 8), dpi=100)
 
-        class_scores, accuracy = across_class_results(true_labels, pred_labels, 
-                                                      class_names, fig, ax[1])
+        class_scores, accuracy, df_results = across_class_results(true_labels, 
+                                                    pred_labels, class_names,
+                                                    title, fig, ax[1])
         make_confusion_matrix(true_labels, pred_labels, fig, ax[0], accuracy,
                                class_names, norm=True)
         fig.suptitle(title)
 
         # Save Figure
         filename = 'cv_' + str(title) + '.jpg'
-        plt.savefig(os.path.join(path,filename), dpi = 100)
+        fig.savefig(os.path.join(path,filename), dpi = 100)
         plt.show()
+
+        # Create DataFrame
+        df = pd.concat([df, df_results], ignore_index=True, axis=0)
+
+        # Make Second Plot
+        precision_recall_barplot(class_scores, title, path)
+
+    return df
 
 def plotlearningcurve(model_name, param_dict, param_title_dictionary, score, 
                       train_sizes_dict, train_scores_mean_dict, 
