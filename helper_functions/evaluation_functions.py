@@ -194,8 +194,56 @@ def make_confusion_matrix(y_true, y_pred, fig, ax, accuracy, classes=None,
                 color="white" if cm[i, j] > threshold else "black",
                 size=text_size)
             
+def find_most_wrong_prediction(image_filenames, test_indexes, y_true, y_pred, 
+                               pred_prob, class_names, title, path, root='/data/'):
+    
+    """
+    Creates a DataFrame compiling the images that were wrongfully classified by 
+    the model.
+
+    Args:
+        image_filenames: filenames of the images used in the dataset.
+        test_indexes: indexes used to test the classifier.
+        y_true: true label of the image.
+        y_pred: predicted label of the image.
+        pred_prob: probability of the prediction.
+        class_names: name of each predicted class.
+        root: directory were the images are stored.
+
+    Output:
+        wrong_pred: DataFrame that compiles wrongfully predicted images.
+    """
+
+    # Extract values of interes
+    test_filenames = image_filenames[test_indexes]
+    img_paths = [os.path.join(root, filepath) for 
+                                        filepath in test_filenames]
+
+    # Create DataFrame
+    pred_df = pd.DataFrame({
+        'img_path': img_paths,
+        'y_true': y_true,
+        'y_pred': y_pred,
+        'pred_prob': pred_prob,
+        'y_true_classname': [class_names[int(y)] for y in y_true],
+        'y_pred_classname': [class_names[int(y)] for y in y_pred]
+    })
+    
+    # Add column that indicates wether the prediction was right
+    pred_df['pred_correct'] = pred_df.y_true == pred_df.y_pred
+
+    # Get wrong predictions and sort them by their probability
+    wrong_preds = pred_df[~pred_df.pred_correct].sort_values(by='pred_prob',
+                                                                ascending=False)
+    
+    # Save Dataframe as csv
+    filename = 'wrong_pred_' + str(title) + '.jpg'
+    wrong_preds.to_csv(os.path.join(path,filename + '.csv'))
+    
+    return wrong_preds
+            
 def multiclass_CV(classifier, k, X_dict, y, param_dict, param_title_dictionary, 
-                  class_names, model_name, path):
+                  class_names, model_name, path, image_filenames):
     
     """
     Plots a confusion matrix and f1-scores calculated from the concatenation of 
@@ -212,6 +260,8 @@ def multiclass_CV(classifier, k, X_dict, y, param_dict, param_title_dictionary,
     Output:
         df: DataFrame with the results of each model.
     """
+
+    model_wrong_preds = {}
 
     df = pd.DataFrame()
     
@@ -230,6 +280,8 @@ def multiclass_CV(classifier, k, X_dict, y, param_dict, param_title_dictionary,
 
         pred_labels = []
         true_labels = []
+        test_indexes = []
+        prob_labels = []
 
         for train_index, test_index in skf.split(X, y):
 
@@ -239,11 +291,20 @@ def multiclass_CV(classifier, k, X_dict, y, param_dict, param_title_dictionary,
 
             # Fit the model and predict
             classifier.fit(X_train, y_train)
-            y_pred = classifier.predict(X_test)
+            pred_probs = classifier.predict_proba(X_test)
+            y_pred = pred_probs.argmax(axis=1)
+            y_prob = pred_probs.max(axis=1)
 
             # Make confusion matrix
             pred_labels.extend(y_pred)
             true_labels.extend(y_test)
+            test_indexes.extend(test_index)
+            prob_labels.extend(y_prob)
+
+        # Find most wrong predictions
+        model_wrong_preds[dataset_key] = find_most_wrong_prediction(image_filenames, 
+                                            test_indexes, true_labels, pred_labels, 
+                                            prob_labels, class_names, title, path)
 
         fig, ax = plt.subplots(1, 2, figsize=(16, 8), dpi=100)
 
@@ -259,13 +320,14 @@ def multiclass_CV(classifier, k, X_dict, y, param_dict, param_title_dictionary,
         fig.savefig(os.path.join(path,filename), dpi = 100)
         plt.show()
 
-        # Create DataFrame
-        df = pd.concat([df, df_results], ignore_index=True, axis=0)
-
         # Make Second Plot
         precision_recall_barplot(class_scores, title, path)
 
-    return df
+        # Create and Store DataFrame
+        df = pd.concat([df, df_results], ignore_index=True, axis=0)
+        df.to_csv(os.path.join(path,os.path.basename(path) + '.csv'))
+
+    return df, model_wrong_preds
 
 def plotlearningcurve(model_name, param_dict, param_title_dictionary, score, 
                       train_sizes_dict, train_scores_mean_dict, 
