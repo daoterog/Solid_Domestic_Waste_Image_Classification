@@ -13,6 +13,8 @@ from sklearn.metrics import (auc, precision_score, recall_score, f1_score,
                             average_precision_score, plot_precision_recall_curve,
                             roc_curve, classification_report, confusion_matrix)
 
+import tensorflow as tf
+
 def load_and_prep_image(filename, img_shape=224, scale=True):
     """
     Reads in an image from filename, turns it into a tensor and reshapes into
