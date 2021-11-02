@@ -15,6 +15,47 @@ from sklearn.metrics import (auc, precision_score, recall_score, f1_score,
 
 import tensorflow as tf
 
+def plot_loss_curves(history, model_name, path):
+    """
+    Returns separate loss curves for training and validation metrics.
+    Args:
+        history: TensorFlow model History object.
+        model_name: model name.
+        path: path to store plot
+    """ 
+
+    # Extract Values
+    loss = history.history['loss']
+    val_loss = history.history['val_loss']
+
+    accuracy = history.history['accuracy']
+    val_accuracy = history.history['val_accuracy']
+
+    epochs = range(len(history.history['loss']))
+
+    # Creat Plots
+    fig, ax = plt.subplots(1, 2, figsize=(13, 6), dpi=100)
+    fig.suptitle(model_name)
+
+    # Plot loss
+    ax[0].plot(epochs, loss, label='training_loss')
+    ax[0].plot(epochs, val_loss, label='val_loss')
+    ax[0].set_title('Loss')
+    ax[0].set_xlabel('Epochs')
+    ax[0].legend()
+
+    # Plot accuracy
+    ax[1].plot(epochs, accuracy, label='training_accuracy')
+    ax[1].plot(epochs, val_accuracy, label='val_accuracy')
+    ax[1].set_title('Accuracy')
+    ax[1].set_xlabel('Epochs')
+    ax[1].legend();
+
+    # Save Figure
+    filename = 'learning_curve_' + model_name + '.jpg'
+    fig.savefig(os.path.join(path, filename), dpi=100)
+    plt.show
+
 def load_and_prep_image(filename, img_shape=224, scale=True):
     """
     Reads in an image from filename, turns it into a tensor and reshapes into
