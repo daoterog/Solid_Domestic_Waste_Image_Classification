@@ -13,7 +13,165 @@ from sklearn.metrics import (auc, precision_score, recall_score, f1_score,
                             average_precision_score, plot_precision_recall_curve,
                             roc_curve, classification_report, confusion_matrix)
 
+def load_and_prep_image(filename, img_shape=224, scale=True):
+    """
+    Reads in an image from filename, turns it into a tensor and reshapes into
+    (224, 224, 3).
+
+    Parameters
+    ----------
+    filename (str): string filename of target image
+    img_shape (int): size to resize target image to, default 224
+    scale (bool): whether to scale pixel values to range(0, 1), default True
+    """
+    # Read in the image
+    img = tf.io.read_file(filename)
+    # Decode it into a tensor
+    img = tf.io.decode_image(img)
+    # Resize the image
+    img = tf.image.resize(img, [img_shape, img_shape])
+    if scale:
+        # Rescale the image (get all values between 0 and 1)
+        return img/255.
+    else:
+        return img
+
+def print_most_wrong_prediction(wrong_preds, n):
+
+    """
+    Prints a sample of the most wrong predictions made.
+
+    Args:
+        wrong_preds: DataFrame with wrong predictions.
+        n: number of images to print.
+    """
+
+    worng_preds_sample = wrong_preds.iloc[n,:]
+
+    for row in wrong_preds.itertuples():
+        _, img_path, _, _, pred_prob, true_cn, pred_cn, _ = row
+
+        img = load_and_prep_image(img_path, scale=True)
+        plt.imshow(img)
+        plt.title(f"{img_path}\nactual: {true_cn}, pred: {pred_cn} \nprob: {pred_prob:.2f}")
+        plt.axis(False)
+        plt.show()
+
+def find_most_wrong_prediction_NN(test_data, y_true, y_pred, pred_probs, 
+                                  class_names):
+    
+    """
+    Creates a DataFrame compiling the images that were wrongfully classified by 
+    the model.
+
+    Args:
+        test_data: Image Data Generator test images object
+        y_true: true image labels.
+        y_pred: predicted image labels.
+        pred_probs: predicted probabilities.
+        class_names: image labels class names.
+
+    Output:
+        wrong_preds: DataFrame with wrong prediction.
+    """
+
+    # Get the filenames of our test data
+    filepaths = []
+    for filepath in test_data.list_files('/content/data/test/*/*.jpg',
+                                        shuffle=False):
+        filepaths.append(filepath.numpy())
+
+    # Create DataFrame
+    pred_df = pd.DataFrame({
+        'img_path': filepaths,
+        'y_true': y_true,
+        'y_pred': y_pred,
+        'pred_prob': pred_probs.max(axis=1),
+        'y_true_classname': [class_names[y] for y in y_true],
+        'y_pred_classname': [class_names[y] for y in y_pred]
+    })
+
+    # Add column that indicates wether the prediction was right
+    pred_df['pred_correct'] = pred_df.y_true == pred_df.y_pred
+
+    # Get wrong predictions and sort them by their probability
+    wrong_preds = pred_df[~pred_df.pred_correct].sort_values(by='pred_prob',
+                                                                ascending=False)
+    
+    return wrong_preds
+
+def evaluate_NN(model, test_data, model_name, path):
+
+    """
+    Evaluates Neural Networks performance by calculating most wrong predictions, 
+    compiling accuracy, precision, recall, and f1-score, plotting confusion
+    matrix, and previously mentioned scores barplots.
+
+    Args:
+        model: Neural Network.
+        test_data: Image Data Generator test images object.
+        model_name: name of the model
+        path: path to compile experiments.
+
+    Output:
+        df_results: DataFrame with the results of each model.
+        wrong_preds: DataFrame with wrong predictions.
+    """
+
+    # Make prediction with the model
+    pred_probs = model.predict(test_data, verbose=1)
+
+    # Get image labels
+    y_labels = []
+    for _, label in test_data.unbatch():
+        y_labels.append(label.numpy().argmax())
+
+    # Get predicted labels
+    y_pred = pred_probs.argmax(axis = 1)
+
+    # Get class names
+    class_names = test_data.class_names
+
+    # Find most wrong predictions
+    wrong_preds = find_most_wrong_prediction_NN(test_data, y_labels, y_pred, 
+                                                pred_probs, class_names)
+
+    # Start plots
+    fig, ax = plt.subplots(1, 2, figsize=(16, 8), dpi=100)
+
+    # Find Across Class Results
+    class_scores, accuracy, df_results = across_class_results(y_labels, 
+                                                    y_pred, class_names,
+                                                    model_name, fig, ax[1])
+
+    # Confusion matrix
+    make_confusion_matrix(y_labels, y_pred, fig, ax[0], accuracy,
+                               class_names, norm=True)
+    
+    fig.suptitle(model_name)
+
+    # Save Figure
+    filename = 'cv_' + str(model_name) + '.jpg'
+    fig.savefig(os.path.join(path,filename), dpi = 100)
+    plt.show()
+
+    # Make Second Plot
+    precision_recall_barplot(class_scores, model_name, path)
+
+    # Store Results
+    df_results.to_csv(os.path.join(path,os.path.basename(path) + '.csv'))
+
+    return df_results, wrong_preds
+
 def create_wrong_prediction_image_dir(image_paths, dir):
+  
+  """
+  Creates a provisional directory to store images wrongfully classified.
+  
+  Args:
+    image_paths: list of image paths.
+    dir: directory in which will be stored.
+  """
     
     try:
         os.makedirs(dir)
@@ -28,6 +186,17 @@ def create_wrong_prediction_image_dir(image_paths, dir):
 
 def print_wrong_predictions(wrong_preds, n_images, image_generator, params, 
                             dir=None):
+  
+  """
+  Prints sample of wrongfully predicted images.
+  
+  Args:
+    wrong_preds: DataFrame of wrong classifications.
+    n_images: number of images to be printed.
+    image_generator: Image Generator Object.
+    params: parameters used in the Image Generator.
+    dir: provisional directory to store images.
+  """
 
     # Extract Sample Images Paths
     sample_wrong_preds = wrong_preds.iloc[:n_images,]
@@ -60,6 +229,7 @@ def print_wrong_predictions(wrong_preds, n_images, image_generator, params,
         plt.axis(False)
         plt.show()
 
+    # Delete provisional directory
     try:
         shutil.rmtree(os.path.dirname(dir))
     except Exception:
