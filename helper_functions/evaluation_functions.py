@@ -145,7 +145,7 @@ def print_most_wrong_prediction(wrong_preds, n):
         n: number of images to print.
     """
 
-    worng_preds_sample = wrong_preds.iloc[n,:]
+    worng_preds_sample = wrong_preds.iloc[:n,:]
 
     for row in wrong_preds.itertuples():
         _, img_path, _, _, pred_prob, true_cn, pred_cn, _ = row
