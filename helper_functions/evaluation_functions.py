@@ -172,17 +172,17 @@ def create_wrong_prediction_image_dir(image_paths, dir):
     image_paths: list of image paths.
     dir: directory in which will be stored.
   """
-    
-    try:
-        os.makedirs(dir)
-    except OSError as e:
-        if e.errno == errno.EEXIST:
-            print('Directory already exist')
-        else:
-            raise
 
-    for path in image_paths:
-        shutil.copy('/content/'+path, os.path.join(dir,os.path.basename(path)))
+  try:
+      os.makedirs(dir)
+  except OSError as e:
+      if e.errno == errno.EEXIST:
+          print('Directory already exist')
+      else:
+          raise
+
+  for path in image_paths:
+      shutil.copy('/content/'+path, os.path.join(dir,os.path.basename(path)))
 
 def print_wrong_predictions(wrong_preds, n_images, image_generator, params, 
                             dir=None):
@@ -198,42 +198,42 @@ def print_wrong_predictions(wrong_preds, n_images, image_generator, params,
     dir: provisional directory to store images.
   """
 
-    # Extract Sample Images Paths
-    sample_wrong_preds = wrong_preds.iloc[:n_images,]
-    image_paths = sample_wrong_preds.img_path.tolist()
+  # Extract Sample Images Paths
+  sample_wrong_preds = wrong_preds.iloc[:n_images,]
+  image_paths = sample_wrong_preds.img_path.tolist()
 
-    # Create directory to store images
+  # Create directory to store images
 
-    # Make target directory
-    if dir == None:
-        dir = '/content/wrong_prediction_images/images'
+  # Make target directory
+  if dir == None:
+      dir = '/content/wrong_prediction_images/images'
 
-    create_wrong_prediction_image_dir(image_paths, dir)
-    
-    # Load and process images
-    data_gen = image_generator.flow_from_directory(directory=os.path.dirname(dir),
-                                                   batch_size = n_images,
-                                                   **params)
-    
-    # Extract images
-    wrong_pred_images, _ = data_gen.next()
+  create_wrong_prediction_image_dir(image_paths, dir)
 
-    # Plot images
-    for i, row in enumerate(sample_wrong_preds.itertuples()):
-        _, img_path, _, _, y_prob, y_true, y_pred, _ = row
+  # Load and process images
+  data_gen = image_generator.flow_from_directory(directory=os.path.dirname(dir),
+                                                 batch_size = n_images,
+                                                 **params)
 
-        img = wrong_pred_images[i]
+  # Extract images
+  wrong_pred_images, _ = data_gen.next()
 
-        plt.imshow(img[:,:,0])
-        plt.title(f"{img_path}\nactual: {y_true}, pred: {y_pred} \nprob: {y_prob:.2f}")
-        plt.axis(False)
-        plt.show()
+  # Plot images
+  for i, row in enumerate(sample_wrong_preds.itertuples()):
+      _, img_path, _, _, y_prob, y_true, y_pred, _ = row
 
-    # Delete provisional directory
-    try:
-        shutil.rmtree(os.path.dirname(dir))
-    except Exception:
-        print('Directory not found')
+      img = wrong_pred_images[i]
+
+      plt.imshow(img[:,:,0])
+      plt.title(f"{img_path}\nactual: {y_true}, pred: {y_pred} \nprob: {y_prob:.2f}")
+      plt.axis(False)
+      plt.show()
+
+  # Delete provisional directory
+  try:
+      shutil.rmtree(os.path.dirname(dir))
+  except Exception:
+      print('Directory not found')
 
 def across_class_results(y_true, y_pred, class_names, title, fig, ax):
 
