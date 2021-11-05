@@ -8,7 +8,8 @@ import random
 import pandas as pd
 import numpy as np
 
-from sklearn.externals import joblib
+# from sklearn.externals import joblib
+import joblib
 
 def copy_folder(path, destination):
 
