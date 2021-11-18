@@ -15,6 +15,55 @@ from sklearn.metrics import (auc, precision_score, recall_score, f1_score,
 
 import tensorflow as tf
 
+def split_dataset(X_dict, y, train_size=0.6, val_test_split=0.5):
+
+    """
+    Splits dataset in train, validation, and test set.
+
+    Args:
+        X: independent variables.
+        y: dependent variables.
+        train_size: train size proportion.
+        val_test_split: test proportion of the remaining portion of the dataset.
+
+    Output:
+        (X_train, y_train): train dataset tuple.
+        (X_val, y_val): validation dataset tuple.
+        (X_test, y_val): validation dataset tuple.
+    """
+
+    # Dictionary to store values
+    data_train_dict = {}
+    data_validation_dict = {}
+    data_test_dict = {}
+
+    # Loop through datasets
+    for dataset_key in X_dict.keys():
+
+        # Extract dataset
+        X = X_dict[dataset_key]
+
+        # Split datasets
+        X_train, X_split, y_train, y_split = train_test_split(X, y, 
+                                                            train_size=train_size)
+        X_val, X_test, y_val, y_test = train_test_split(X_split, y_split, 
+                                                        test_size=val_test_split)
+
+        # Convert to tensor
+        X_train = tf.reshape(tf.convert_to_tensor(X_train.to_numpy()), X_train.shape)
+        y_train = tf.reshape(tf.convert_to_tensor(y_train.to_numpy()), y_train.shape)
+        X_val = tf.reshape(tf.convert_to_tensor(X_val.to_numpy()), X_val.shape)
+        y_val = tf.reshape(tf.convert_to_tensor(y_val.to_numpy()), y_val.shape)
+        X_test = tf.reshape(tf.convert_to_tensor(X_test.to_numpy()), X_test.shape)
+        y_test = tf.reshape(tf.convert_to_tensor(y_test.to_numpy()), y_test.shape)
+
+        # Store datasets
+        data_train_dict[dataset_key] = (X_train, y_train)
+        data_validation_dict[dataset_key] = (X_val, y_val)
+        data_test_dict[dataset_key] = (X_test, y_test)
+        
+    return data_train_dict, data_validation_dict, data_test_dict
+
 def compare_historys(original_history, new_history, initial_epochs, model_name, 
                      path):
     """
