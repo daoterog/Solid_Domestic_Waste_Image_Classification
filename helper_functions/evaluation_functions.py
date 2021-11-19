@@ -152,7 +152,7 @@ def plot_loss_curves(history, model_name, path):
 
     # Plot accuracy
     ax[1].plot(epochs, accuracy, label='training_' + metric)
-    ax[1].plot(epochs, val_accuracy, label='val_' metric)
+    ax[1].plot(epochs, val_accuracy, label='val_' + metric)
     ax[1].set_title(metric)
     ax[1].set_xlabel('Epochs')
     ax[1].legend();
