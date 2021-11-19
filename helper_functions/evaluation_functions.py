@@ -104,7 +104,7 @@ def compare_historys(original_history, new_history, metric, initial_epochs, mode
     ax[0].plot([initial_epochs-1, initial_epochs-1],
               plt.ylim(), label='Start Fine Tuning') # reshift plot around epochs
     ax[0].legend(loc='lower right')
-    ax[0].set_title('Training and Validation ' + metric')
+    ax[0].set_title('Training and Validation ' + metric)
     ax[0].set_xlabel('epoch')
 
     # Loss learning curve
