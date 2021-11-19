@@ -100,7 +100,7 @@ def compare_historys(original_history, new_history, metric, initial_epochs, mode
 
     # Acuracy learning curve
     ax[0].plot(total_acc, label='Training ' + metric)
-    ax[0].plot(total_val_acc, label='Validation' + metric')
+    ax[0].plot(total_val_acc, label='Validation' + metric)
     ax[0].plot([initial_epochs-1, initial_epochs-1],
               plt.ylim(), label='Start Fine Tuning') # reshift plot around epochs
     ax[0].legend(loc='lower right')
