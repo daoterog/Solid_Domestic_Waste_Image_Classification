@@ -366,7 +366,7 @@ def get_visual_dictionary(X, patch_size, step_size, dict_size):
                                                         patch_size, step_size)]
 
         cinit = np.zeros((dict_size, patch_size**2))
-        km = KMeans(n_clusters=dict_size, init=cinit, n_init=1, n_jobs=-1)
+        km = KMeans(n_clusters=dict_size, init=cinit, n_init=1)
         km.fit(patches)
         return km.cluster_centers_
 

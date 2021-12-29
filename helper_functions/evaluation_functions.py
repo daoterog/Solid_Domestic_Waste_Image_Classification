@@ -15,7 +15,56 @@ from sklearn.metrics import (auc, precision_score, recall_score, f1_score,
 
 import tensorflow as tf
 
-def compare_historys(original_history, new_history, initial_epochs, model_name, 
+def split_dataset(X_dict, y, train_size=0.6, val_test_split=0.5):
+
+    """
+    Splits dataset in train, validation, and test set.
+
+    Args:
+        X: independent variables.
+        y: dependent variables.
+        train_size: train size proportion.
+        val_test_split: test proportion of the remaining portion of the dataset.
+
+    Output:
+        (X_train, y_train): train dataset tuple.
+        (X_val, y_val): validation dataset tuple.
+        (X_test, y_val): validation dataset tuple.
+    """
+
+    # Dictionary to store values
+    data_train_dict = {}
+    data_validation_dict = {}
+    data_test_dict = {}
+
+    # Loop through datasets
+    for dataset_key in X_dict.keys():
+
+        # Extract dataset
+        X = X_dict[dataset_key]
+
+        # Split datasets
+        X_train, X_split, y_train, y_split = train_test_split(X, y, 
+                                                            train_size=train_size)
+        X_val, X_test, y_val, y_test = train_test_split(X_split, y_split, 
+                                                        test_size=val_test_split)
+
+        # Convert to tensor
+        X_train = tf.reshape(tf.convert_to_tensor(X_train.to_numpy()), X_train.shape)
+        y_train = tf.reshape(tf.convert_to_tensor(y_train.to_numpy()), y_train.shape)
+        X_val = tf.reshape(tf.convert_to_tensor(X_val.to_numpy()), X_val.shape)
+        y_val = tf.reshape(tf.convert_to_tensor(y_val.to_numpy()), y_val.shape)
+        X_test = tf.reshape(tf.convert_to_tensor(X_test.to_numpy()), X_test.shape)
+        y_test = tf.reshape(tf.convert_to_tensor(y_test.to_numpy()), y_test.shape)
+
+        # Store datasets
+        data_train_dict[dataset_key] = (X_train, y_train)
+        data_validation_dict[dataset_key] = (X_val, y_val)
+        data_test_dict[dataset_key] = (X_test, y_test)
+        
+    return data_train_dict, data_validation_dict, data_test_dict
+
+def compare_historys(original_history, new_history, metric, initial_epochs, model_name, 
                      path):
     """
     Compares two TensorFlow model History objects.
@@ -24,6 +73,7 @@ def compare_historys(original_history, new_history, initial_epochs, model_name,
         original_history: History object from original model (before new_history)
         new_history: History object from continued model training (after 
             original_history).
+        metric: metric with which the model was evaluated.
         initial_epochs: Number of epochs in original_history (new_history plot 
             starts from here).
         model_name: model name.
@@ -31,17 +81,17 @@ def compare_historys(original_history, new_history, initial_epochs, model_name,
     """
     
     # Get original history measurements
-    acc = original_history.history["accuracy"]
+    acc = original_history.history[metric]
     loss = original_history.history["loss"]
 
-    val_acc = original_history.history["val_accuracy"]
+    val_acc = original_history.history["val_" + metric]
     val_loss = original_history.history["val_loss"]
 
     # Combine original history with new history
-    total_acc = acc + new_history.history["accuracy"]
+    total_acc = acc + new_history.history[metric]
     total_loss = loss + new_history.history["loss"]
 
-    total_val_acc = val_acc + new_history.history["val_accuracy"]
+    total_val_acc = val_acc + new_history.history["val_" + metric]
     total_val_loss = val_loss + new_history.history["val_loss"]
 
     # Make plots
@@ -49,12 +99,12 @@ def compare_historys(original_history, new_history, initial_epochs, model_name,
     fig.suptitle(model_name)
 
     # Acuracy learning curve
-    ax[0].plot(total_acc, label='Training Accuracy')
-    ax[0].plot(total_val_acc, label='Validation Accuracy')
+    ax[0].plot(total_acc, label='Training ' + metric)
+    ax[0].plot(total_val_acc, label='Validation' + metric)
     ax[0].plot([initial_epochs-1, initial_epochs-1],
               plt.ylim(), label='Start Fine Tuning') # reshift plot around epochs
     ax[0].legend(loc='lower right')
-    ax[0].set_title('Training and Validation Accuracy')
+    ax[0].set_title('Training and Validation ' + metric)
     ax[0].set_xlabel('epoch')
 
     # Loss learning curve
@@ -84,8 +134,8 @@ def plot_loss_curves(history, model_name, path):
     loss = history.history['loss']
     val_loss = history.history['val_loss']
 
-    accuracy = history.history['accuracy']
-    val_accuracy = history.history['val_accuracy']
+    accuracy = history.history[metric]
+    val_accuracy = history.history['val_' + metric]
 
     epochs = range(len(history.history['loss']))
 
@@ -101,9 +151,9 @@ def plot_loss_curves(history, model_name, path):
     ax[0].legend()
 
     # Plot accuracy
-    ax[1].plot(epochs, accuracy, label='training_accuracy')
-    ax[1].plot(epochs, val_accuracy, label='val_accuracy')
-    ax[1].set_title('Accuracy')
+    ax[1].plot(epochs, accuracy, label='training_' + metric)
+    ax[1].plot(epochs, val_accuracy, label='val_' + metric)
+    ax[1].set_title(metric)
     ax[1].set_xlabel('Epochs')
     ax[1].legend();
 

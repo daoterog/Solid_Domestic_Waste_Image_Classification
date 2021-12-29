@@ -8,8 +8,51 @@ import random
 import pandas as pd
 import numpy as np
 
-# from sklearn.externals import joblib
+import tensorflow as tf
 import joblib
+
+def create_feature_vector_dataframe(model, data, path, csv_name):
+
+    """
+    Creates dataframe from feature vector extracted from the last layer 
+    before the output of the NN.
+
+    Args:
+        model: Neural Network.
+        data: image_dataset_from_directory object.
+        path: path to store the csv.
+        csv_name: self explanatory.
+    """
+
+    # Create vector extractor
+    extractor = tf.keras.Model(inputs=model.input,
+                            outputs=model.layers[-2].output)
+
+    # Create tensors to store embeddings
+    image_features = tf.constant([])
+    image_labels = tf.constant([])
+
+    # Loop that extract features of batches
+    for i, (images, labels) in enumerate(data.take(2390)):
+        
+        # Extract features
+        features = extractor(images)
+        
+        # Store values
+        if tf.equal(tf.size(image_features), 0):
+            image_features = features
+            image_labels = labels
+        else:
+            image_features = tf.concat([image_features, features], axis=0)
+            image_labels = tf.concat([image_labels, labels], axis=0)
+
+    # Get filenames and convert it to tensor
+    filenames = data.file_paths
+    filenames = tf.expand_dims(tf.convert_to_tensor(filenames), axis=1)
+
+    # Stack, create and store DataFrame
+    df = pd.DataFrame(np.hstack((filenames, image_features, image_labels)))
+    df.to_csv(os.path.join(path, csv_name))
 
 def copy_folder(path, destination):
 
